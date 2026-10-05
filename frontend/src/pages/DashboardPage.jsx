@@ -279,20 +279,37 @@ export default function DashboardPage() {
         <div className="device-grid">
           {devices.map((device) => {
             const waiting = Boolean(pending[device.id]);
-            return (
-              <div className="device-card" key={device.id}>
-                <div className="device-card-top">
-                  <strong>{device.name}</strong>
-                  <span className={`mini-state ${waiting ? 'pending' : device.status.toLowerCase()}`}>
-                    <span className="dot" /> {waiting ? 'PENDING' : device.status}
-                  </span>
-                </div>
-                <div className="device-buttons">
-                  <button disabled={waiting} className={device.status === 'ON' && !waiting ? 'on active' : ''} onClick={() => doControl(device.id, 'ON')}>ON</button>
-                  <button disabled={waiting} className={device.status === 'OFF' && !waiting ? 'off active' : ''} onClick={() => doControl(device.id, 'OFF')}>OFF</button>
-                </div>
+           return (
+            <div className="device-card" key={device.id}>
+              <div className="device-card-top">
+                <strong>
+                  {device.name} {device.name === 'Quạt' ? '🌀' : device.name === 'Đèn' ? '💡' : device.name === 'Điều hòa' ? '❄️' : ''}
+                </strong>
+
+                <span className={`mini-state ${waiting ? 'pending' : device.status.toLowerCase()}`}>
+                  <span className="dot" /> {waiting ? 'PENDING' : device.status}
+                </span>
               </div>
-            );
+
+              <div className="device-buttons">
+                <button
+                  disabled={waiting}
+                  className={device.status === 'ON' && !waiting ? 'on active' : ''}
+                  onClick={() => doControl(device.id, 'ON')}
+                >
+                  ON
+                </button>
+
+                <button
+                  disabled={waiting}
+                  className={device.status === 'OFF' && !waiting ? 'off active' : ''}
+                  onClick={() => doControl(device.id, 'OFF')}
+                >
+                  OFF
+                </button>
+              </div>
+            </div>
+          );
           })}
         </div>
       </section>
