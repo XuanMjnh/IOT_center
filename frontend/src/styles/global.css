@@ -868,7 +868,7 @@ a {
 
 .login-screen {
   min-height: 100vh;
-  background: #000;
+  background: #fff;
   display: grid;
   place-items: center;
   padding: 24px;
