@@ -35,7 +35,7 @@ const resources = [
     title: 'Project Report',
     text: 'View comprehensive thesis, research and metrics report',
     action: 'View Report',
-    url: 'https://drive.google.com/file/d/1vIfCkbXnkj9XBGpUcBVElzN6TuoczNNr/view?usp=sharing',
+    url: 'https://drive.google.com/file/d/1eVlpE3ztjLXOKXNbu7V-fsqu7uHRhCZd/view?usp=sharing',
   },
 ];
 
