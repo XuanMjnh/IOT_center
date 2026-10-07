@@ -1,16 +1,12 @@
 import jwt from 'jsonwebtoken';
 
-export function requireAuth(req, res, next) {
-  const header = req.headers.authorization || '';
-  const [scheme, token] = header.split(' ');
-  if (scheme !== 'Bearer' || !token) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
+const SECRET = process.env.JWT_SECRET || 'development-secret-change-me';
 
+export function requireAuth(req, res, next) {
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET || 'development-secret-change-me');
-    return next();
+    req.user = jwt.verify(req.headers.authorization?.split(' ')[1], SECRET);
+    next();
   } catch {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    res.status(401).json({ message: 'Invalid or expired token' });
   }
 }

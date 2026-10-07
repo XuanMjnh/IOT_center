@@ -1,18 +1,17 @@
-export function positiveInt(value, fallback, max = 1000) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
-  return Math.min(parsed, max);
-}
-
-export function zeroBasedPage(value) {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+export function pagination(query) {
+  const page = Math.max(0, Number(query.page) || 0);
+  const size = Math.min(100, Math.max(1, Number(query.size) || 10));
+  return { page, size, offset: page * size };
 }
 
 export function sqlDate(value) {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  return value ? new Date(value).toISOString().slice(0, 19).replace('T', ' ') : null;
+}
+
+export function where(filters) {
+  const active = filters.filter(([, value]) => value !== undefined && value !== null && value !== '');
+  return {
+    sql: active.length ? `WHERE ${active.map(([clause]) => clause).join(' AND ')}` : '',
+    params: active.map(([, value]) => value)
+  };
 }

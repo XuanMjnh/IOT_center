@@ -1,86 +1,56 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import MessageBar from '../components/MessageBar.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import TablePagination from '../components/TablePagination.jsx';
 import TimeFilterField from '../components/TimeFilterField.jsx';
-import { getErrorMessage, formatDate, timeFilterToRange } from '../utils.js';
+import { formatDate, getErrorMessage, timeFilterToRange } from '../utils.js';
 
-const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE = 10;
 const EMPTY_FILTERS = { deviceId: '', time: '', action: '', status: '' };
-const EMPTY_PAGE = {
-  content: [],
-  page: 0,
-  totalPages: 0,
-  totalElements: 0,
-  size: DEFAULT_PAGE_SIZE
-};
 
 export default function DeviceHistoryPage() {
   const [devices, setDevices] = useState([]);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState(EMPTY_FILTERS);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [data, setData] = useState(EMPTY_PAGE);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [data, setData] = useState({ content: [], page: 0, size: PAGE_SIZE, totalPages: 0, totalElements: 0 });
   const [error, setError] = useState('');
 
-  const loadHistory = useCallback(async (page, nextFilters, size) => {
+  const loadHistory = async (page, nextFilters, size) => {
     try {
-      setError('');
-      const timeRange = timeFilterToRange(nextFilters.time);
-      const { data: response } = await api.get('/devices/action-history', {
-        params: {
-          deviceId: nextFilters.deviceId || undefined,
-          action: nextFilters.action || undefined,
-          status: nextFilters.status || undefined,
-          from: timeRange.from,
-          toExclusive: timeRange.toExclusive,
-          page,
-          size,
-          sort: 'id,desc'
-        }
+      const { time, ...filters } = nextFilters;
+      const response = await api.get('/devices/action-history', {
+        params: { ...filters, ...timeFilterToRange(time), page, size }
       });
-      setData(response);
+      setData(response.data);
+      setError('');
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Cannot load device history.'));
     }
-  }, []);
+  };
 
   useEffect(() => {
     api.get('/devices')
-      .then(({ data: response }) => setDevices(response))
-      .catch((requestError) => {
-        setError(getErrorMessage(requestError, 'Cannot load device list.'));
-      });
+      .then(({ data }) => setDevices(data))
+      .catch((e) => setError(getErrorMessage(e, 'Cannot load device list.')));
+    loadHistory(0, EMPTY_FILTERS, PAGE_SIZE);
   }, []);
 
-  useEffect(() => {
-    loadHistory(0, EMPTY_FILTERS, DEFAULT_PAGE_SIZE);
-  }, [loadHistory]);
-
-  const updateFilter = (name, value) => {
-    setFilters((current) => ({ ...current, [name]: value }));
-  };
-
+  const updateFilter = (name, value) => setFilters({ ...filters, [name]: value });
   const search = () => {
     setAppliedFilters(filters);
     loadHistory(0, filters, pageSize);
   };
-
   const reset = () => {
     setFilters(EMPTY_FILTERS);
     setAppliedFilters(EMPTY_FILTERS);
     loadHistory(0, EMPTY_FILTERS, pageSize);
   };
-
   const changePageSize = (size) => {
     setPageSize(size);
     loadHistory(0, appliedFilters, size);
   };
-
-  const userName = (row) => row.userName
-    || row.username
-    || (row.userId ? `User ${row.userId}` : '\u2014');
 
   return (
     <>
@@ -89,27 +59,17 @@ export default function DeviceHistoryPage() {
       <section className="filter-panel history-filter">
         <div className="filter-field">
           <label htmlFor="history-device">DEVICE</label>
-          <select
-            id="history-device"
-            value={filters.deviceId}
-            onChange={(event) => updateFilter('deviceId', event.target.value)}
-          >
+          <select id="history-device" value={filters.deviceId} onChange={(e) => updateFilter('deviceId', e.target.value)}>
             <option value="">All Devices</option>
             {devices.map((device) => (
-              <option key={device.id} value={device.id}>
-                {device.name || `Device ${device.id}`}
-              </option>
+              <option key={device.id} value={device.id}>{device.name || `Device ${device.id}`}</option>
             ))}
           </select>
         </div>
 
         <div className="filter-field compact-select">
           <label htmlFor="history-action">ACTION</label>
-          <select
-            id="history-action"
-            value={filters.action}
-            onChange={(event) => updateFilter('action', event.target.value)}
-          >
+          <select id="history-action" value={filters.action} onChange={(e) => updateFilter('action', e.target.value)}>
             <option value="">All Actions</option>
             <option value="ON">ON</option>
             <option value="OFF">OFF</option>
@@ -118,11 +78,7 @@ export default function DeviceHistoryPage() {
 
         <div className="filter-field compact-select">
           <label htmlFor="history-status">STATUS</label>
-          <select
-            id="history-status"
-            value={filters.status}
-            onChange={(event) => updateFilter('status', event.target.value)}
-          >
+          <select id="history-status" value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
             <option value="">All Status</option>
             <option value="SUCCESS">SUCCESS</option>
             <option value="FAILED">FAILED</option>
@@ -131,14 +87,9 @@ export default function DeviceHistoryPage() {
         </div>
 
         <div className="filter-spacer" />
-
         <div className="filter-field time-field">
           <label>TIME</label>
-          <TimeFilterField
-            value={filters.time}
-            onChange={(time) => updateFilter('time', time)}
-            onSearch={search}
-          />
+          <TimeFilterField value={filters.time} onChange={(time) => updateFilter('time', time)} onSearch={search} />
         </div>
 
         <div className="filter-actions">
@@ -150,14 +101,7 @@ export default function DeviceHistoryPage() {
       <div className="table-wrap history-table-wrap">
         <table className="data-table history-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>DEVICE</th>
-              <th>ACTION</th>
-              <th>STATUS</th>
-              <th>USER NAME</th>
-              <th>TIME</th>
-            </tr>
+            <tr><th>ID</th><th>DEVICE</th><th>ACTION</th><th>STATUS</th><th>USER NAME</th><th>TIME</th></tr>
           </thead>
           <tbody>
             {data.content.map((row) => (
@@ -166,24 +110,19 @@ export default function DeviceHistoryPage() {
                 <td className="mono">{row.deviceName || `Device ${row.deviceId}`}</td>
                 <td className="value-strong">{row.action}</td>
                 <td><StatusBadge status={row.status} /></td>
-                <td>{userName(row)}</td>
+                <td>{row.userName || row.username || `User ${row.userId}`}</td>
                 <td className="mono muted">{formatDate(row.createdAt)}</td>
               </tr>
             ))}
             {!data.content.length && (
-              <tr>
-                <td colSpan="6" className="empty-row">No records found.</td>
-              </tr>
+              <tr><td colSpan="6" className="empty-row">No records found.</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       <TablePagination
-        page={data.page}
-        size={data.size}
-        totalPages={data.totalPages}
-        totalElements={data.totalElements}
+        {...data}
         pageSize={pageSize}
         onPage={(page) => loadHistory(page, appliedFilters, pageSize)}
         onPageSize={changePageSize}

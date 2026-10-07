@@ -1,56 +1,34 @@
-export function getErrorMessage(error, fallback) {
-  return error?.response?.data?.message || error?.message || fallback;
-}
+export const getErrorMessage = (error, fallback) =>
+  error?.response?.data?.message || error?.message || fallback;
 
 export function formatDate(value) {
   if (!value) return '—';
-  const d = new Date(value.includes?.('T') ? value : String(value).replace(' ', 'T') + 'Z');
-  if (Number.isNaN(d.getTime())) return String(value);
+  const date = new Date(String(value).includes('T') ? value : `${String(value).replace(' ', 'T')}Z`);
   const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 export function sensorValue(name, value) {
-  const num = Number(value);
-  const n = Number.isFinite(num) ? num : value;
-  const key = String(name || '').toLowerCase();
-  if (key === 'temperature') return `${Number(n).toFixed(1)} °C`;
-  if (key === 'humidity') return `${Number(n).toFixed(0)} %`;
-  if (key === 'light') return `${Number(n).toFixed(0)} lux`;
-  return String(n);
+  const formats = {
+    temperature: [1, ' °C'],
+    humidity: [0, ' %'],
+    light: [0, ' lux']
+  };
+  const [digits, unit] = formats[String(name).toLowerCase()] || [null, ''];
+  return digits === null ? String(value) : `${Number(value).toFixed(digits)}${unit}`;
 }
 
-// Turns a partial local wall-clock value into a half-open range. The omitted
-// parts determine whether the range covers a year, month, day, hour, minute,
-// or second.
 export function timeFilterToRange(value) {
-  const input = String(value || '').trim();
-  if (!input) return {};
+  const text = String(value || '').trim();
+  if (!text) return {};
 
-  const match = /^(\d{4})(?:-(\d{2})(?:-(\d{2})(?:[ T](\d{2})(?::(\d{2})(?::(\d{2}))?)?)?)?)?$/.exec(input);
-  if (!match) {
-    throw new Error('Time must use a format from YYYY up to YYYY-MM-DD HH:mm:ss.');
-  }
-
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
-  const parts = [yearText, monthText || '1', dayText || '1', hourText || '0', minuteText || '0', secondText || '0'].map(Number);
-  const [year, month, day, hour, minute, second] = parts;
-  const start = new Date(year, month - 1, day, hour, minute, second, 0);
-
-  if (
-    start.getFullYear() !== year || start.getMonth() !== month - 1 || start.getDate() !== day ||
-    start.getHours() !== hour || start.getMinutes() !== minute || start.getSeconds() !== second
-  ) {
-    throw new Error('Time is not a valid calendar date and time.');
-  }
-
+  const parts = text.replace(/[ T]/, '-').replaceAll(':', '-').split('-').map(Number);
+  const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0] = parts;
+  const start = new Date(year, month - 1, day, hour, minute, second);
   const end = new Date(start);
-  if (secondText !== undefined) end.setSeconds(end.getSeconds() + 1);
-  else if (minuteText !== undefined) end.setMinutes(end.getMinutes() + 1);
-  else if (hourText !== undefined) end.setHours(end.getHours() + 1);
-  else if (dayText !== undefined) end.setDate(end.getDate() + 1);
-  else if (monthText !== undefined) end.setMonth(end.getMonth() + 1);
-  else end.setFullYear(end.getFullYear() + 1);
+  const units = ['FullYear', 'Month', 'Date', 'Hours', 'Minutes', 'Seconds'];
+  const unit = units[parts.length - 1];
+  end[`set${unit}`](end[`get${unit}`]() + 1);
 
   return { from: start.toISOString(), toExclusive: end.toISOString() };
 }

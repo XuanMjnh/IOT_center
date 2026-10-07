@@ -14,19 +14,16 @@ export default function LoginPage() {
 
   if (auth?.token) return <Navigate to="/" replace />;
 
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!form.username.trim() || !form.password) {
-      setError('Please enter username and password.');
-      return;
-    }
+  const update = ({ target }) => setForm({ ...form, [target.name]: target.value });
+  const submit = async (event) => {
+    event.preventDefault();
     setLoading(true);
     setError('');
     try {
       await login(form.username.trim(), form.password);
       navigate('/', { replace: true });
-    } catch (error) {
-      setError(getErrorMessage(error, 'Login failed. Please try again.'));
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -41,23 +38,25 @@ export default function LoginPage() {
 
         <label>USERNAME</label>
         <input
+          name="username"
           type="text"
           placeholder="Enter your username"
           autoComplete="username"
           value={form.username}
-          onChange={(e) => setForm({ ...form, username: e.target.value })}
+          onChange={update}
         />
 
         <label>PASSWORD</label>
         <div className="password-field">
           <input
+            name="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="Enter your password"
             autoComplete="current-password"
             value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            onChange={update}
           />
-          <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label="Toggle password visibility">
+          <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label="Toggle password visibility">
             {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>
         </div>

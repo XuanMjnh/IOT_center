@@ -8,10 +8,8 @@ export default function TimeFilterField({ value, onChange, onSearch }) {
       aria-label="Time"
       title="Enter from YYYY up to YYYY-MM-DD HH:mm:ss"
       value={value}
-      onChange={(event) => onChange(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') onSearch?.();
-      }}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => e.key === 'Enter' && onSearch?.()}
     />
   );
 }

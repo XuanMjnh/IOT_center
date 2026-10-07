@@ -6,21 +6,17 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  try {
-    const auth = JSON.parse(localStorage.getItem('iot-auth') || 'null');
-    if (auth?.token) config.headers.Authorization = `Bearer ${auth.token}`;
-  } catch {
-    // Ignore broken localStorage data.
-  }
+  const token = JSON.parse(localStorage.getItem('iot-auth') || 'null')?.token;
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !String(error.config?.url || '').includes('/auth/login')) {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
       localStorage.removeItem('iot-auth');
-      if (window.location.pathname !== '/login') window.location.assign('/login');
+      window.location.assign('/login');
     }
     return Promise.reject(error);
   }

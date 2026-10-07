@@ -1,30 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import MessageBar from '../components/MessageBar.jsx';
 import TablePagination from '../components/TablePagination.jsx';
 import { formatDate, getErrorMessage, sensorValue, timeFilterToRange } from '../utils.js';
 
-const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE = 10;
 const EMPTY_FILTERS = { filterBy: '', query: '' };
-const EMPTY_PAGE = {
-  content: [],
-  page: 0,
-  totalPages: 0,
-  totalElements: 0,
-  size: DEFAULT_PAGE_SIZE
-};
 
-function resolveFilters(filters) {
+function queryParams(filters) {
   const query = filters.query.trim();
-  const isTimeQuery = filters.filterBy === 'time'
-    || (filters.filterBy === '' && /^\d{4}(?:-|\s|$)/.test(query));
-
+  const isTime = filters.filterBy === 'time' || (!filters.filterBy && /^\d{4}/.test(query));
   return {
-    sensorId: filters.filterBy.startsWith('sensor:')
-      ? filters.filterBy.slice('sensor:'.length)
-      : undefined,
-    time: isTimeQuery ? query : '',
-    value: query && !isTimeQuery ? query : undefined
+    sensorId: filters.filterBy.startsWith('sensor:') ? filters.filterBy.slice(7) : undefined,
+    ...timeFilterToRange(isTime ? query : ''),
+    value: query && !isTime ? query : undefined
   };
 }
 
@@ -32,59 +21,39 @@ export default function SensorDataPage() {
   const [sensors, setSensors] = useState([]);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState(EMPTY_FILTERS);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [data, setData] = useState(EMPTY_PAGE);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [data, setData] = useState({ content: [], page: 0, size: PAGE_SIZE, totalPages: 0, totalElements: 0 });
   const [error, setError] = useState('');
 
-  const loadHistory = useCallback(async (page, nextFilters, size) => {
+  const loadHistory = async (page, nextFilters, size) => {
     try {
-      setError('');
-      const resolved = resolveFilters(nextFilters);
-      const timeRange = timeFilterToRange(resolved.time);
-      const { data: response } = await api.get('/sensor-data/history', {
-        params: {
-          sensorId: resolved.sensorId,
-          from: timeRange.from,
-          toExclusive: timeRange.toExclusive,
-          value: resolved.value,
-          page,
-          size,
-          sort: 'id,desc'
-        }
+      const response = await api.get('/sensor-data/history', {
+        params: { ...queryParams(nextFilters), page, size }
       });
-      setData(response);
+      setData(response.data);
+      setError('');
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Cannot load sensor history.'));
     }
-  }, []);
+  };
 
   useEffect(() => {
     api.get('/sensor-data/sensors')
-      .then(({ data: response }) => setSensors(response))
-      .catch((requestError) => {
-        setError(getErrorMessage(requestError, 'Cannot load sensor list.'));
-      });
+      .then(({ data }) => setSensors(data))
+      .catch((e) => setError(getErrorMessage(e, 'Cannot load sensor list.')));
+    loadHistory(0, EMPTY_FILTERS, PAGE_SIZE);
   }, []);
 
-  useEffect(() => {
-    loadHistory(0, EMPTY_FILTERS, DEFAULT_PAGE_SIZE);
-  }, [loadHistory]);
-
-  const updateFilter = (name, value) => {
-    setFilters((current) => ({ ...current, [name]: value }));
-  };
-
+  const updateFilter = (name, value) => setFilters({ ...filters, [name]: value });
   const search = () => {
     setAppliedFilters(filters);
     loadHistory(0, filters, pageSize);
   };
-
   const reset = () => {
     setFilters(EMPTY_FILTERS);
     setAppliedFilters(EMPTY_FILTERS);
     loadHistory(0, EMPTY_FILTERS, pageSize);
   };
-
   const changePageSize = (size) => {
     setPageSize(size);
     loadHistory(0, appliedFilters, size);
@@ -102,13 +71,11 @@ export default function SensorDataPage() {
           <select
             id="sensor-filter-type"
             value={filters.filterBy}
-            onChange={(event) => updateFilter('filterBy', event.target.value)}
+            onChange={(e) => updateFilter('filterBy', e.target.value)}
           >
             <option value="">All Sensors</option>
             {sensors.map((sensor) => (
-              <option key={sensor.id} value={`sensor:${sensor.id}`}>
-                {sensor.name}
-              </option>
+              <option key={sensor.id} value={`sensor:${sensor.id}`}>{sensor.name}</option>
             ))}
             <option value="time">Time</option>
           </select>
@@ -123,15 +90,12 @@ export default function SensorDataPage() {
             className={timeMode ? 'mono' : undefined}
             placeholder={timeMode ? 'YYYY-MM-DD HH:mm:ss' : ''}
             value={filters.query}
-            onChange={(event) => updateFilter('query', event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') search();
-            }}
+            onChange={(e) => updateFilter('query', e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && search()}
           />
         </div>
 
         <div className="filter-spacer" />
-
         <div className="filter-actions">
           <button className="btn primary" onClick={search}>Search</button>
           <button className="btn secondary" onClick={reset}>Reset</button>
@@ -141,12 +105,7 @@ export default function SensorDataPage() {
       <div className="table-wrap history-table-wrap">
         <table className="data-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>SENSOR TYPE</th>
-              <th>VALUE</th>
-              <th>TIME</th>
-            </tr>
+            <tr><th>ID</th><th>SENSOR TYPE</th><th>VALUE</th><th>TIME</th></tr>
           </thead>
           <tbody>
             {data.content.map((row) => (
@@ -158,19 +117,14 @@ export default function SensorDataPage() {
               </tr>
             ))}
             {!data.content.length && (
-              <tr>
-                <td colSpan="4" className="empty-row">No records found.</td>
-              </tr>
+              <tr><td colSpan="4" className="empty-row">No records found.</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       <TablePagination
-        page={data.page}
-        size={data.size}
-        totalPages={data.totalPages}
-        totalElements={data.totalElements}
+        {...data}
         pageSize={pageSize}
         onPage={(page) => loadHistory(page, appliedFilters, pageSize)}
         onPageSize={changePageSize}
