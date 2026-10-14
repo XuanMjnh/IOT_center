@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import MessageBar from '../components/MessageBar.jsx';
 import TablePagination from '../components/TablePagination.jsx';
-import { formatDate, getErrorMessage, sensorValue, timeFilterToRange } from '../utils.js';
+import CopyTime from '../components/CopyTime.jsx';
+import { getErrorMessage, sensorValue, timeFilterToRange } from '../utils.js';
 
 const PAGE_SIZE = 10;
 const EMPTY_FILTERS = { filterBy: '', query: '' };
@@ -113,7 +114,7 @@ export default function SensorDataPage() {
                 <td className="mono">{row.id}</td>
                 <td>{row.sensorName}</td>
                 <td className="value-strong mono">{sensorValue(row.sensorName, row.value)}</td>
-                <td className="mono muted">{formatDate(row.createdAt)}</td>
+                <td className="mono muted"><CopyTime value={row.createdAt} /></td>
               </tr>
             ))}
             {!data.content.length && (

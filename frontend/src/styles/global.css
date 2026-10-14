@@ -585,6 +585,50 @@ a {
 
 
 
+.copy-time {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.copy-time-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  color: #64748b;
+}
+
+.copy-time-button:not(:disabled):hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.copy-time-button:focus-visible {
+  outline: 2px solid #0b98b7;
+  outline-offset: 2px;
+}
+
+.copy-time-button.copied {
+  color: #047857;
+  border-color: #047857;
+}
+
+.copy-time-button.error,
+.copy-time-error {
+  color: #b91c1c;
+}
+
+.copy-time-error {
+  font-size: 11px;
+}
+
 .table-wrap {
   border: 1px solid #d6dde6;
   border-radius: 4px;

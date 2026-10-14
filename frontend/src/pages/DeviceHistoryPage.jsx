@@ -4,7 +4,8 @@ import MessageBar from '../components/MessageBar.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import TablePagination from '../components/TablePagination.jsx';
 import TimeFilterField from '../components/TimeFilterField.jsx';
-import { formatDate, getErrorMessage, timeFilterToRange } from '../utils.js';
+import CopyTime from '../components/CopyTime.jsx';
+import { getErrorMessage, timeFilterToRange } from '../utils.js';
 
 const PAGE_SIZE = 10;
 const EMPTY_FILTERS = { deviceId: '', time: '', action: '', status: '' };
@@ -111,7 +112,7 @@ export default function DeviceHistoryPage() {
                 <td className="value-strong">{row.action}</td>
                 <td><StatusBadge status={row.status} /></td>
                 <td>{row.userName || row.username || `User ${row.userId}`}</td>
-                <td className="mono muted">{formatDate(row.createdAt)}</td>
+                <td className="mono muted"><CopyTime value={row.createdAt} /></td>
               </tr>
             ))}
             {!data.content.length && (
